@@ -119,7 +119,7 @@ const VIEWS = [
   },
   {
     id: 'event-advancement',
-    label: 'Event',
+    label: 'From Event',
     pathTemplate: '/v1/{season}/events/{eventCode}/advancement',
     pathParams: ['season', 'eventCode'],
     queryParams: [],
@@ -167,7 +167,7 @@ const VIEWS = [
   },
   {
     id: 'region-advancement',
-    label: 'Details',
+    label: 'Teams',
     pathTemplate: '/v1/{season}/regions/{region}/advancement',
     pathParams: ['season', 'region'],
     queryParams: [],
@@ -175,7 +175,7 @@ const VIEWS = [
   },
   {
     id: 'all-advancement',
-    label: 'Region',
+    label: 'By Event',
     pathTemplate: '/v1/{season}/advancement',
     pathParams: ['season'],
     queryParams: ['region'],
@@ -427,14 +427,15 @@ function toTables(viewId, data, values) {
             Qual: formatRecord(readValue(item, 'qual_record', 'QualRecord')),
             Playoff: formatRecord(readValue(item, 'playoff_record', 'PlayoffRecord')),
             Advanced: readValue(item, 'advanced', 'Advanced') ? '✓' : '',
-            Awards: Array.isArray(readValue(item, 'awards', 'Awards')) ? readValue(item, 'awards', 'Awards').join(', ') : '',
+            Awards: Array.isArray(readValue(item, 'awards', 'Awards'))
+              ? readValue(item, 'awards', 'Awards').map(a => String(a))
+              : [],
           })),
         },
       ]
     }
 
     case 'event-teams': {
-      const teams = Array.isArray(event?.teams) ? event.teams : []
       return [
         buildEventDetailsTable(event),
         {
@@ -754,16 +755,18 @@ function DataTable({ title, columns, rows }) {
                     >
                       {Array.isArray(row[column])
                         ? row[column].map((entry, entryIndex) => {
+                          if (column === 'Awards') {
+                            return <div key={`${column}-${entryIndex}`}>{entry}</div>;
+                          }
                           if (entry && typeof entry === 'object' && ('teamNum' in entry || 'teamName' in entry)) {
                             return (
                               <div key={`${column}-${entryIndex}`} className="match-team-cell">
                                 <div className="match-team-num">{entry.teamNum || ''}</div>
                                 <div className="match-team-name">{entry.teamName || ''}</div>
                               </div>
-                            )
+                            );
                           }
-
-                          return <div key={`${column}-${entryIndex}`}>{entry}</div>
+                          return <div key={`${column}-${entryIndex}`}>{entry}</div>;
                         })
                         : (row[column] ?? '')}
                     </td>
@@ -800,7 +803,7 @@ function App() {
     }
   })
   const [loading, setLoading] = useState(false)
-    // Removed statusCode state
+  // Removed statusCode state
   const [tables, setTables] = useState([])
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -869,14 +872,14 @@ function App() {
       const response = await fetch(requestUrl)
       const data = await response.json()
 
-        if (response.status !== 200) {
-          setDisplayErrorMessage('Server Error')
-          setTables([])
-          setLoading(false)
-          return
-        } else {
-          setTables(toTables(selectedView.id, data, values))
-        }
+      if (response.status !== 200) {
+        setDisplayErrorMessage('Server Error')
+        setTables([])
+        setLoading(false)
+        return
+      } else {
+        setTables(toTables(selectedView.id, data, values))
+      }
     } catch (error) {
       setStatusCode(null)
       setTables([])
@@ -1087,7 +1090,7 @@ function App() {
           <section className="card">
             <h2>Results</h2>
             {displayErrorMessage && <p className="error">{displayErrorMessage}</p>}
-              {/* Status code display removed */}
+            {/* Status code display removed */}
             {tables.length === 0 && <p className="empty-state">No data loaded yet.</p>}
             {tables.map((table) => (
               <DataTable key={table.title} title={table.title} columns={table.columns} rows={table.rows} />
