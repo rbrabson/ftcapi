@@ -192,9 +192,31 @@ thead th {
 }
 
 .match-team-num {
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .match-team-name {
   color: var(--muted-text);
+}
+
+.alliance-cell {
+  transition: background-color 120ms ease;
+}
+
+.alliance-cell-red {
+  background: color-mix(in srgb, #ff0000 30%, transparent);
+}
+
+.alliance-cell-blue {
+  background: color-mix(in srgb, #0066ff 30%, transparent);
+}
+
+.alliance-winner {
+  font-weight: 800;
+}
+
+.alliance-winner .match-team-num,
+.alliance-winner .match-team-name {
+  font-weight: 800;
+  color: var(--text-color);
 }

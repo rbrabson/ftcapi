@@ -743,7 +743,15 @@ function DataTable({ title, columns, rows }) {
               {sortedRows.map((row, index) => (
                 <tr key={`${title}-${index}`}>
                   {columns.map((column) => (
-                    <td key={column}>
+                    <td
+                      key={column}
+                      className={[
+                        column === 'Red Alliance' ? 'alliance-cell alliance-cell-red' : '',
+                        column === 'Blue Alliance' ? 'alliance-cell alliance-cell-blue' : '',
+                        column === 'Red Alliance' && row.Result === 'Red' ? 'alliance-winner' : '',
+                        column === 'Blue Alliance' && row.Result === 'Blue' ? 'alliance-winner' : '',
+                      ].filter(Boolean).join(' ')}
+                    >
                       {Array.isArray(row[column])
                         ? row[column].map((entry, entryIndex) => {
                           if (entry && typeof entry === 'object' && ('teamNum' in entry || 'teamName' in entry)) {
@@ -792,7 +800,7 @@ function App() {
     }
   })
   const [loading, setLoading] = useState(false)
-  const [statusCode, setStatusCode] = useState(null)
+    // Removed statusCode state
   const [tables, setTables] = useState([])
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -861,13 +869,14 @@ function App() {
       const response = await fetch(requestUrl)
       const data = await response.json()
 
-      setStatusCode(response.status)
-      if (!response.ok) {
-        setTables([])
-        setErrorMessage(data?.error || 'Request failed')
-      } else {
-        setTables(toTables(selectedView.id, data, values))
-      }
+        if (response.status !== 200) {
+          setDisplayErrorMessage('Server Error')
+          setTables([])
+          setLoading(false)
+          return
+        } else {
+          setTables(toTables(selectedView.id, data, values))
+        }
     } catch (error) {
       setStatusCode(null)
       setTables([])
@@ -878,7 +887,7 @@ function App() {
   }
 
   const clearResponse = () => {
-    setStatusCode(null)
+    // Removed setStatusCode
     setTables([])
     setErrorMessage('')
   }
@@ -1078,7 +1087,7 @@ function App() {
           <section className="card">
             <h2>Results</h2>
             {displayErrorMessage && <p className="error">{displayErrorMessage}</p>}
-            {statusCode !== null && <p className="status">Status: {statusCode}</p>}
+              {/* Status code display removed */}
             {tables.length === 0 && <p className="empty-state">No data loaded yet.</p>}
             {tables.map((table) => (
               <DataTable key={table.title} title={table.title} columns={table.columns} rows={table.rows} />
