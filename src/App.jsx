@@ -766,7 +766,6 @@ function App() {
       season: userDefaults.season,
       region: userDefaults.region,
       teamId: userDefaults.teamNumber,
-      team: userDefaults.teamNumber,
       eventCode: lastFilters.eventCode,
       limit: lastFilters.limit,
     }
@@ -877,7 +876,6 @@ function App() {
       season: nextDefaults.season,
       region: nextDefaults.region,
       teamId: nextDefaults.teamNumber,
-      team: nextDefaults.teamNumber,
     }))
   }
 
