@@ -273,17 +273,12 @@ function teamsDisplay(alliance) {
       const teamNum = readValue(team, 'team_id', 'TeamID')
       const teamName = readValue(team, 'name', 'Name')
 
-      if (teamNum && teamName) {
-        return `${teamNum} - ${teamName}`
+      return {
+        teamNum: teamNum ? String(teamNum) : '',
+        teamName: teamName ? String(teamName) : '',
       }
-
-      if (teamNum) {
-        return `${teamNum}`
-      }
-
-      return teamName || ''
     })
-    .filter((value) => value)
+    .filter((entry) => entry.teamNum || entry.teamName)
 }
 
 function eventDisplay(event) {
@@ -363,6 +358,10 @@ function buildUrl(baseUrl, view, values) {
 
   for (const param of view.queryParams) {
     if (view.id === 'event-matches' && param === 'limit' && (values.phase ?? '').trim() !== '') {
+      continue
+    }
+
+    if (view.id === 'event-matches' && param === 'team') {
       continue
     }
 
@@ -457,7 +456,7 @@ function toTables(viewId, data, values) {
       return [
         buildEventDetailsTable(event),
         {
-          title: `Event Rankings${event?.event_code ? ` - ${event.event_code}` : ''}`,
+          title: `Qualification Rankings${event?.event_code ? ` - ${event.event_code}` : ''}`,
           columns: ['Rank', 'Team Num', 'Team Name', 'RS', 'Match Pts', 'Base Pts', 'Auto Pts', 'High Score', 'W-L-T', 'Matches'],
           rows: rankings.map((item, index) => {
             const team = item.team
@@ -540,10 +539,21 @@ function toTables(viewId, data, values) {
         ? matches.filter((match) => getMatchPhase(match) === selectedPhase)
         : matches
 
+      const selectedTeamFilter = (values?.team ?? '').trim()
+      const teamFilteredMatches = selectedTeamFilter
+        ? phaseFilteredMatches.filter((match) => {
+          const redHasTeam = Array.isArray(match?.red_alliance?.teams)
+            && match.red_alliance.teams.some((team) => String(readValue(team, 'team_id', 'TeamID') ?? '') === selectedTeamFilter)
+          const blueHasTeam = Array.isArray(match?.blue_alliance?.teams)
+            && match.blue_alliance.teams.some((team) => String(readValue(team, 'team_id', 'TeamID') ?? '') === selectedTeamFilter)
+          return redHasTeam || blueHasTeam
+        })
+        : phaseFilteredMatches
+
       const requestedLimit = Number.parseInt((values?.limit ?? '').trim(), 10)
       const filteredMatches = Number.isFinite(requestedLimit) && requestedLimit > 0
-        ? phaseFilteredMatches.slice(0, requestedLimit)
-        : phaseFilteredMatches
+        ? teamFilteredMatches.slice(0, requestedLimit)
+        : teamFilteredMatches
 
       return [
         buildEventDetailsTable(event),
@@ -735,7 +745,18 @@ function DataTable({ title, columns, rows }) {
                   {columns.map((column) => (
                     <td key={column}>
                       {Array.isArray(row[column])
-                        ? row[column].map((entry, entryIndex) => <div key={`${column}-${entryIndex}`}>{entry}</div>)
+                        ? row[column].map((entry, entryIndex) => {
+                          if (entry && typeof entry === 'object' && ('teamNum' in entry || 'teamName' in entry)) {
+                            return (
+                              <div key={`${column}-${entryIndex}`} className="match-team-cell">
+                                <div className="match-team-num">{entry.teamNum || ''}</div>
+                                <div className="match-team-name">{entry.teamName || ''}</div>
+                              </div>
+                            )
+                          }
+
+                          return <div key={`${column}-${entryIndex}`}>{entry}</div>
+                        })
                         : (row[column] ?? '')}
                     </td>
                   ))}

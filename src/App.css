@@ -183,3 +183,18 @@ thead th {
 .column-sort-btn:hover {
   text-decoration: underline;
 }
+
+.match-team-cell {
+  display: grid;
+  grid-template-columns: minmax(56px, auto) 1fr;
+  gap: 0.2rem 0.6rem;
+  align-items: baseline;
+}
+
+.match-team-num {
+  font-weight: 700;
+}
+
+.match-team-name {
+  color: var(--muted-text);
+}
