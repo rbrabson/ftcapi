@@ -504,18 +504,35 @@ function toTables(viewId, data, values) {
         buildEventDetailsTable(event),
         {
           title: `Event Advancement${event?.event_code ? ` - ${event.event_code}` : ''}`,
-          columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing'],
+          columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing', 'Advancing Event', 'Other Events'],
           rows: advancements.map((item) => {
             const team = readValue(item, 'team', 'Team')
             const status = (readValue(item, 'status', 'Status') ?? '').toString().toLowerCase()
             const advances = Boolean(readValue(item, 'advances', 'Advances'))
-
             const advancing = status === 'first'
               ? '✓'
               : (status === 'already_advanced' || status === 'already advancing' || status === 'already advanced' || !advances)
                 ? '-'
                 : '-'
-
+            // Advancing event and awards
+            const advEvent = event
+            const advEventName = eventDisplay(advEvent)
+            const advAwards = Array.isArray(readValue(item, 'advancing_event_awards', 'AdvancingEventAwards'))
+              ? readValue(item, 'advancing_event_awards', 'AdvancingEventAwards')
+                .map((award) => readValue(award, 'name', 'Name'))
+                .filter((name) => name)
+              : []
+            // Other events and their awards
+            const otherEvents = Array.isArray(readValue(item, 'other_event_participations', 'OtherEventParticipations'))
+              ? readValue(item, 'other_event_participations', 'OtherEventParticipations').map((entry) => {
+                const eventObj = readValue(entry, 'event', 'Event')
+                const eventName = eventDisplay(eventObj)
+                const awards = Array.isArray(readValue(entry, 'awards', 'Awards'))
+                  ? readValue(entry, 'awards', 'Awards').map((award) => readValue(award, 'name', 'Name')).filter((name) => name)
+                  : []
+                return { eventName, awards }
+              })
+              : []
             return {
               Rank: readValue(item, 'rank', 'Rank') ?? '',
               'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
@@ -527,6 +544,8 @@ function toTables(viewId, data, values) {
               Qualification: readValue(item, 'qualification_points', 'QualificationPoints') ?? '',
               'Adv #': readValue(item, 'advancement_number', 'AdvancementNumber') ?? '',
               Advancing: advancing,
+              'Advancing Event': advEventName ? [{ eventName: advEventName, awards: advAwards }] : [],
+              'Other Events': otherEvents,
             }
           }),
         },
@@ -622,22 +641,35 @@ function toTables(viewId, data, values) {
         : []
       return [{
         title: `Region Advancement${readValue(data, 'region_code', 'RegionCode') ? ` - ${readValue(data, 'region_code', 'RegionCode')}` : ''}`,
-        columns: ['Team Num', 'Team Name', 'Advancing Event', 'Advancing Awards', 'Other Events'],
-        rows: rows.map((item) => ({
-          'Team Num': readValue(readValue(item, 'team', 'Team'), 'team_id', 'TeamID') ?? '',
-          'Team Name': readValue(readValue(item, 'team', 'Team'), 'name', 'Name') ?? '',
-          'Advancing Event': eventDisplay(readValue(item, 'advancing_event', 'AdvancingEvent')),
-          'Advancing Awards': Array.isArray(readValue(item, 'advancing_event_awards', 'AdvancingEventAwards'))
+        columns: ['Team Num', 'Team Name', 'Advancing Event', 'Other Events'],
+        rows: rows.map((item) => {
+          const team = readValue(item, 'team', 'Team')
+          // Advancing event and awards
+          const advEvent = readValue(item, 'advancing_event', 'AdvancingEvent')
+          const advEventName = eventDisplay(advEvent)
+          const advAwards = Array.isArray(readValue(item, 'advancing_event_awards', 'AdvancingEventAwards'))
             ? readValue(item, 'advancing_event_awards', 'AdvancingEventAwards')
               .map((award) => readValue(award, 'name', 'Name'))
               .filter((name) => name)
-            : '',
-          'Other Events': Array.isArray(readValue(item, 'other_event_participations', 'OtherEventParticipations'))
-            ? readValue(item, 'other_event_participations', 'OtherEventParticipations')
-              .map((entry) => eventDisplay(readValue(entry, 'event', 'Event')))
-              .filter((eventName) => eventName)
-            : '',
-        })),
+            : []
+          // Other events and their awards
+          const otherEvents = Array.isArray(readValue(item, 'other_event_participations', 'OtherEventParticipations'))
+            ? readValue(item, 'other_event_participations', 'OtherEventParticipations').map((entry) => {
+              const eventObj = readValue(entry, 'event', 'Event')
+              const eventName = eventDisplay(eventObj)
+              const awards = Array.isArray(readValue(entry, 'awards', 'Awards'))
+                ? readValue(entry, 'awards', 'Awards').map((award) => readValue(award, 'name', 'Name')).filter((name) => name)
+                : []
+              return { eventName, awards }
+            })
+            : []
+          return {
+            'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
+            'Team Name': readValue(team, 'name', 'Name') ?? '',
+            'Advancing Event': advEventName ? [{ eventName: advEventName, awards: advAwards }] : [],
+            'Other Events': otherEvents,
+          }
+        }),
       }]
     }
 
@@ -754,20 +786,38 @@ function DataTable({ title, columns, rows }) {
                       ].filter(Boolean).join(' ')}
                     >
                       {Array.isArray(row[column])
-                        ? row[column].map((entry, entryIndex) => {
-                          if (column === 'Awards') {
+                        ? (['Advancing Event', 'Other Events'].includes(column)
+                          ? (
+                            <ul style={{ margin: 0, paddingLeft: 18 }}>
+                              {row[column].map((event, eventIdx) => (
+                                <li key={eventIdx}>
+                                  {event.eventName}
+                                  {Array.isArray(event.awards) && event.awards.length > 0 && (
+                                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                                      {event.awards.map((award, awardIdx) => (
+                                        <li key={awardIdx}>{award}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )
+                          : row[column].map((entry, entryIndex) => {
+                            if (column === 'Awards') {
+                              return <div key={`${column}-${entryIndex}`}>{entry}</div>;
+                            }
+                            if (entry && typeof entry === 'object' && ('teamNum' in entry || 'teamName' in entry)) {
+                              return (
+                                <div key={`${column}-${entryIndex}`} className="match-team-cell">
+                                  <div className="match-team-num">{entry.teamNum || ''}</div>
+                                  <div className="match-team-name">{entry.teamName || ''}</div>
+                                </div>
+                              );
+                            }
                             return <div key={`${column}-${entryIndex}`}>{entry}</div>;
-                          }
-                          if (entry && typeof entry === 'object' && ('teamNum' in entry || 'teamName' in entry)) {
-                            return (
-                              <div key={`${column}-${entryIndex}`} className="match-team-cell">
-                                <div className="match-team-num">{entry.teamNum || ''}</div>
-                                <div className="match-team-name">{entry.teamName || ''}</div>
-                              </div>
-                            );
-                          }
-                          return <div key={`${column}-${entryIndex}`}>{entry}</div>;
-                        })
+                          })
+                        )
                         : (row[column] ?? '')}
                     </td>
                   ))}
