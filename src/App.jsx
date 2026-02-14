@@ -929,7 +929,7 @@ function App() {
       <header>
         <div className="header-row">
           <div>
-            <h1>FTC Standing Dashboard</h1>
+            <h1>FTC Dashboard</h1>
             <p>{isSettingsPage ? 'Configure application settings.' : 'Select a view, set filters, and load table results.'}</p>
           </div>
           <button type="button" className="icon-btn" aria-label="Open settings" onClick={() => setIsSettingsPage((value) => !value)}>
