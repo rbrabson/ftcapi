@@ -72,6 +72,10 @@ select {
   flex-wrap: wrap;
 }
 
+.tabs-bar-sub {
+  margin-top: 0.25rem;
+}
+
 .tab-btn {
   border: 1px solid var(--input-border);
   background: var(--secondary-btn-bg);

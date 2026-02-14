@@ -4,10 +4,11 @@ import './App.css'
 const THEME_KEY = 'ftcapi-theme'
 const USER_DEFAULTS_KEY = 'ftcapi-user-defaults'
 const LAST_FILTERS_KEY = 'ftcapi-last-filters'
+const DEFAULTS_MIGRATION_KEY = 'ftcapi-defaults-migration-v1'
 
 const BASE_USER_DEFAULTS = {
   season: '2025',
-  region: 'USCHS',
+  region: 'USNC',
   teamNumber: '12345',
 }
 
@@ -79,24 +80,26 @@ function getStoredLastFilters() {
 const VIEWS = [
   {
     id: 'teams',
-    label: 'Teams',
+    label: 'List',
     pathTemplate: '/v1/{season}/teams/{region?}',
     pathParams: ['season', 'region'],
     queryParams: ['limit'],
   },
   {
     id: 'team-details',
-    label: 'Team Details',
+    label: 'Details',
     pathTemplate: '/v1/{season}/team/{teamId}',
     pathParams: ['season', 'teamId'],
     queryParams: [],
+    requiredFields: ['teamId'],
   },
   {
     id: 'event-teams',
-    label: 'Event Teams',
+    label: 'Teams',
     pathTemplate: '/v1/{season}/events/{eventCode}/teams',
     pathParams: ['season', 'eventCode'],
     queryParams: ['limit'],
+    requiredFields: ['eventCode'],
   },
   {
     id: 'event-rankings',
@@ -104,61 +107,128 @@ const VIEWS = [
     pathTemplate: '/v1/{season}/events/{eventCode}/rankings',
     pathParams: ['season', 'eventCode'],
     queryParams: ['limit'],
+    requiredFields: ['eventCode'],
   },
   {
     id: 'event-awards',
-    label: 'Event Awards',
+    label: 'Awards',
     pathTemplate: '/v1/{season}/events/{eventCode}/awards',
     pathParams: ['season', 'eventCode'],
     queryParams: ['limit'],
+    requiredFields: ['eventCode'],
   },
   {
     id: 'event-advancement',
-    label: 'Event Advancement',
+    label: 'Event',
     pathTemplate: '/v1/{season}/events/{eventCode}/advancement',
     pathParams: ['season', 'eventCode'],
     queryParams: [],
+    requiredFields: ['eventCode'],
   },
   {
     id: 'event-matches',
-    label: 'Event Matches',
+    label: 'Matches',
     pathTemplate: '/v1/{season}/events/{eventCode}/matches',
     pathParams: ['season', 'eventCode'],
     queryParams: ['team', 'limit'],
     localParams: ['phase'],
+    requiredFields: ['eventCode'],
   },
   {
-    id: 'team-rankings',
-    label: 'Team Rankings',
+    id: 'team-rankings-region',
+    label: 'Region',
     pathTemplate: '/v1/{season}/team-rankings',
     pathParams: ['season'],
-    queryParams: ['region', 'country', 'event', 'limit'],
+    queryParams: ['region', 'limit'],
+    requiredFields: ['region'],
+  },
+  {
+    id: 'team-rankings-global',
+    label: 'Global',
+    pathTemplate: '/v1/{season}/team-rankings',
+    pathParams: ['season'],
+    queryParams: ['limit'],
+  },
+  {
+    id: 'team-rankings-country',
+    label: 'Country',
+    pathTemplate: '/v1/{season}/team-rankings',
+    pathParams: ['season'],
+    queryParams: ['country', 'limit'],
+    requiredFields: ['country'],
+  },
+  {
+    id: 'team-rankings-event',
+    label: 'Event',
+    pathTemplate: '/v1/{season}/team-event-rankings',
+    pathParams: ['season'],
+    queryParams: ['event', 'limit'],
+    requiredFields: ['event'],
   },
   {
     id: 'region-advancement',
-    label: 'Team Advancement',
+    label: 'Details',
     pathTemplate: '/v1/{season}/regions/{region}/advancement',
     pathParams: ['season', 'region'],
     queryParams: [],
+    requiredFields: ['region'],
   },
   {
     id: 'all-advancement',
-    label: 'Event Advancement',
+    label: 'Region',
     pathTemplate: '/v1/{season}/advancement',
     pathParams: ['season'],
     queryParams: ['region'],
+    requiredFields: ['region'],
   },
 ]
 
+const TOP_LEVEL_TABS = [
+  {
+    id: 'events',
+    label: 'Events',
+    viewIds: ['event-teams', 'event-matches', 'event-rankings', 'event-awards'],
+  },
+  {
+    id: 'advancement',
+    label: 'Advancement',
+    viewIds: ['event-advancement', 'all-advancement', 'region-advancement'],
+  },
+  {
+    id: 'rankings',
+    label: 'Rankings',
+    viewIds: ['team-rankings-region', 'team-rankings-global', 'team-rankings-country', 'team-rankings-event'],
+  },
+  {
+    id: 'teams',
+    label: 'Teams',
+    viewIds: ['teams', 'team-details'],
+  },
+]
+
+const LABEL_SORT_OPTIONS = { sensitivity: 'base' }
+
+function sortByLabel(left, right) {
+  return left.label.localeCompare(right.label, undefined, LABEL_SORT_OPTIONS)
+}
+
+const SORTED_TOP_LEVEL_TABS = [...TOP_LEVEL_TABS].sort(sortByLabel)
+
+function getSortedViewsForTab(tab) {
+  return VIEWS
+    .filter((view) => tab.viewIds.includes(view.id))
+    .sort(sortByLabel)
+}
+
 const FIELD_META = {
   season: { label: 'Season', placeholder: '2025' },
-  teamId: { label: 'Team ID', placeholder: '12345' },
-  region: { label: 'Region', placeholder: 'USCHS' },
+  teamId: { label: 'Team Number', placeholder: '12345' },
+  region: { label: 'Region', placeholder: 'USNC' },
   eventCode: { label: 'Event Code', placeholder: 'USNCCOQ' },
   country: { label: 'Country', placeholder: 'USA' },
-  event: { label: 'Event (optional)', placeholder: 'USNCCOQ' },
+  event: { label: 'Event', placeholder: 'USNCCOQ' },
   team: { label: 'Team Filter', placeholder: '12345' },
-  limit: { label: 'Limit', placeholder: '25' },
+  limit: { label: 'Limit', placeholder: '100' },
   phase: {
     label: 'Match Phase',
     type: 'select',
@@ -173,12 +243,12 @@ const FIELD_META = {
 const DEFAULT_VALUES = {
   season: '2025',
   teamId: '12345',
-  region: 'USCHS',
+  region: 'USNC',
   eventCode: 'USNCCOQ',
-  country: '',
+  country: 'USA',
   event: '',
   team: '',
-  limit: '25',
+  limit: '100',
   phase: '',
 }
 
@@ -223,6 +293,23 @@ function eventDisplay(event) {
   return `${readValue(event, 'event_code', 'EventCode') ?? ''} - ${readValue(event, 'name', 'Name') ?? ''}`.trim()
 }
 
+function buildEventDetailsTable(event) {
+  return {
+    title: 'Event',
+    columns: ['Event', 'Year', 'Location', 'Dates'],
+    rows: [{
+      Event: eventDisplay(event),
+      Year: readValue(event, 'year', 'Year') ?? '',
+      Location: [readValue(event, 'city', 'City'), readValue(event, 'state_prov', 'StateProv'), readValue(event, 'country', 'Country')]
+        .filter(Boolean)
+        .join(', '),
+      Dates: [formatDate(readValue(event, 'date_start', 'DateStart')), formatDate(readValue(event, 'date_end', 'DateEnd'))]
+        .filter(Boolean)
+        .join(' to '),
+    }],
+  }
+}
+
 function readValue(object, ...keys) {
   for (const key of keys) {
     if (object && object[key] !== undefined) {
@@ -260,10 +347,6 @@ function getMatchPhase(match) {
 
 function buildUrl(baseUrl, view, values) {
   let path = view.pathTemplate
-
-  if (view.id === 'team-rankings' && (values.event ?? '').trim() !== '') {
-    path = '/v1/{season}/team-event-rankings'
-  }
 
   for (const param of view.pathParams) {
     const value = (values[param] ?? '').trim()
@@ -354,16 +437,7 @@ function toTables(viewId, data, values) {
     case 'event-teams': {
       const teams = Array.isArray(event?.teams) ? event.teams : []
       return [
-        {
-          title: 'Event',
-          columns: ['Event', 'Year', 'Location', 'Dates'],
-          rows: [{
-            Event: eventDisplay(event),
-            Year: event?.year ?? '',
-            Location: [event?.city, event?.state_prov, event?.country].filter(Boolean).join(', '),
-            Dates: [formatDate(readValue(event, 'date_start', 'DateStart')), formatDate(readValue(event, 'date_end', 'DateEnd'))].filter(Boolean).join(' to '),
-          }],
-        },
+        buildEventDetailsTable(event),
         {
           title: 'Event Teams',
           columns: ['Team Num', 'Team Name', 'Location', 'Region', 'Rookie Year'],
@@ -380,74 +454,83 @@ function toTables(viewId, data, values) {
 
     case 'event-rankings': {
       const rankings = Array.isArray(data?.rankings) ? data.rankings : []
-      return [{
-        title: `Event Rankings${event?.event_code ? ` - ${event.event_code}` : ''}`,
-        columns: ['Rank', 'Team Num', 'Team Name', 'RS', 'Match Pts', 'Base Pts', 'Auto Pts', 'High Score', 'W-L-T', 'Matches'],
-        rows: rankings.map((item, index) => {
-          const team = item.team
-          return {
-          Rank: index + 1,
-          'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
-          'Team Name': readValue(team, 'name', 'Name') ?? '',
-          RS: formatNumber(item.sort_order1),
-          'Match Pts': formatNumber(item.sort_order2),
-          'Base Pts': formatNumber(item.sort_order3),
-          'Auto Pts': formatNumber(item.sort_order4),
-          'High Score': item.high_match_score ?? '',
-          'W-L-T': `${item.wins ?? 0}-${item.losses ?? 0}-${item.ties ?? 0}`,
-          Matches: item.matches_played ?? '',
-          }
-        }),
-      }]
+      return [
+        buildEventDetailsTable(event),
+        {
+          title: `Event Rankings${event?.event_code ? ` - ${event.event_code}` : ''}`,
+          columns: ['Rank', 'Team Num', 'Team Name', 'RS', 'Match Pts', 'Base Pts', 'Auto Pts', 'High Score', 'W-L-T', 'Matches'],
+          rows: rankings.map((item, index) => {
+            const team = item.team
+            return {
+              Rank: index + 1,
+              'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
+              'Team Name': readValue(team, 'name', 'Name') ?? '',
+              RS: formatNumber(item.sort_order1),
+              'Match Pts': formatNumber(item.sort_order2),
+              'Base Pts': formatNumber(item.sort_order3),
+              'Auto Pts': formatNumber(item.sort_order4),
+              'High Score': item.high_match_score ?? '',
+              'W-L-T': `${item.wins ?? 0}-${item.losses ?? 0}-${item.ties ?? 0}`,
+              Matches: item.matches_played ?? '',
+            }
+          }),
+        },
+      ]
     }
 
     case 'event-awards': {
       const awards = Array.isArray(event?.awards) ? event.awards : Array.isArray(data?.awards) ? data.awards : []
-      return [{
-        title: `Event Awards${event?.event_code ? ` - ${event.event_code}` : ''}`,
-        columns: ['Award Name', 'Team'],
-        rows: awards.map((item) => {
-          const team = item.team
-          const teamNum = readValue(team, 'team_id', 'TeamID') ?? ''
-          const teamName = readValue(team, 'name', 'Name') ?? ''
-          return {
-          'Award Name': item.name ?? '',
-          Team: teamNum && teamName ? `${teamNum} - ${teamName}` : `${teamNum}${teamName}`,
-          }
-        }),
-      }]
+      return [
+        buildEventDetailsTable(event),
+        {
+          title: `Event Awards${event?.event_code ? ` - ${event.event_code}` : ''}`,
+          columns: ['Award Name', 'Team'],
+          rows: awards.map((item) => {
+            const team = item.team
+            const teamNum = readValue(team, 'team_id', 'TeamID') ?? ''
+            const teamName = readValue(team, 'name', 'Name') ?? ''
+            return {
+              'Award Name': item.name ?? '',
+              Team: teamNum && teamName ? `${teamNum} - ${teamName}` : `${teamNum}${teamName}`,
+            }
+          }),
+        },
+      ]
     }
 
     case 'event-advancement': {
       const advancements = Array.isArray(data?.team_advancements) ? data.team_advancements : []
-      return [{
-        title: `Event Advancement${event?.event_code ? ` - ${event.event_code}` : ''}`,
-        columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing'],
-        rows: advancements.map((item) => {
-          const team = readValue(item, 'team', 'Team')
-          const status = (readValue(item, 'status', 'Status') ?? '').toString().toLowerCase()
-          const advances = Boolean(readValue(item, 'advances', 'Advances'))
+      return [
+        buildEventDetailsTable(event),
+        {
+          title: `Event Advancement${event?.event_code ? ` - ${event.event_code}` : ''}`,
+          columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing'],
+          rows: advancements.map((item) => {
+            const team = readValue(item, 'team', 'Team')
+            const status = (readValue(item, 'status', 'Status') ?? '').toString().toLowerCase()
+            const advances = Boolean(readValue(item, 'advances', 'Advances'))
 
-          const advancing = status === 'first'
-            ? '✓'
-            : (status === 'already_advanced' || status === 'already advancing' || status === 'already advanced' || !advances)
+            const advancing = status === 'first'
+              ? '✓'
+              : (status === 'already_advanced' || status === 'already advancing' || status === 'already advanced' || !advances)
                 ? '-'
                 : '-'
 
-          return {
-          Rank: readValue(item, 'rank', 'Rank') ?? '',
-          'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
-          'Team Name': readValue(team, 'name', 'Name') ?? '',
-          'Total Pts': readValue(item, 'total_points', 'TotalPoints') ?? '',
-          Judging: readValue(item, 'judging_points', 'JudgingPoints') ?? '',
-          Playoff: readValue(item, 'playoff_points', 'PlayoffPoints') ?? '',
-          Selection: readValue(item, 'selection_points', 'SelectionPoints') ?? '',
-          Qualification: readValue(item, 'qualification_points', 'QualificationPoints') ?? '',
-          'Adv #': readValue(item, 'advancement_number', 'AdvancementNumber') ?? '',
-          Advancing: advancing,
-          }
-        }),
-      }]
+            return {
+              Rank: readValue(item, 'rank', 'Rank') ?? '',
+              'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
+              'Team Name': readValue(team, 'name', 'Name') ?? '',
+              'Total Pts': readValue(item, 'total_points', 'TotalPoints') ?? '',
+              Judging: readValue(item, 'judging_points', 'JudgingPoints') ?? '',
+              Playoff: readValue(item, 'playoff_points', 'PlayoffPoints') ?? '',
+              Selection: readValue(item, 'selection_points', 'SelectionPoints') ?? '',
+              Qualification: readValue(item, 'qualification_points', 'QualificationPoints') ?? '',
+              'Adv #': readValue(item, 'advancement_number', 'AdvancementNumber') ?? '',
+              Advancing: advancing,
+            }
+          }),
+        },
+      ]
     }
 
     case 'event-matches': {
@@ -462,38 +545,44 @@ function toTables(viewId, data, values) {
         ? phaseFilteredMatches.slice(0, requestedLimit)
         : phaseFilteredMatches
 
-      return [{
-        title: `Event Matches${event?.event_code ? ` - ${event.event_code}` : ''}`,
-        columns: ['Type', 'Match #', 'Red Alliance', 'Blue Alliance', 'Score', 'Result'],
-        rows: filteredMatches.map((match) => {
-          const redScore = match?.red_alliance?.score?.total_points
-          const blueScore = match?.blue_alliance?.score?.total_points
-          let result = match?.result ?? ''
-          if (!result && Number.isFinite(redScore) && Number.isFinite(blueScore)) {
-            if (redScore > blueScore) {
-              result = 'Red'
-            } else if (blueScore > redScore) {
-              result = 'Blue'
-            } else {
-              result = 'Tie'
+      return [
+        buildEventDetailsTable(event),
+        {
+          title: `Event Matches${event?.event_code ? ` - ${event.event_code}` : ''}`,
+          columns: ['Type', 'Match #', 'Red Alliance', 'Blue Alliance', 'Score', 'Result'],
+          rows: filteredMatches.map((match) => {
+            const redScore = match?.red_alliance?.score?.total_points
+            const blueScore = match?.blue_alliance?.score?.total_points
+            let result = match?.result ?? ''
+            if (!result && Number.isFinite(redScore) && Number.isFinite(blueScore)) {
+              if (redScore > blueScore) {
+                result = 'Red'
+              } else if (blueScore > redScore) {
+                result = 'Blue'
+              } else {
+                result = 'Tie'
+              }
             }
-          }
 
-          return {
-            Type: match.matchType ?? '',
-            'Match #': match.matchNumber ?? '',
-            'Red Alliance': teamsDisplay(match.red_alliance),
-            'Blue Alliance': teamsDisplay(match.blue_alliance),
-            Score: Number.isFinite(redScore) && Number.isFinite(blueScore) ? `${redScore}-${blueScore}` : '',
-            Result: result,
-          }
-        }),
-      }]
+            return {
+              Type: match.matchType ?? '',
+              'Match #': match.matchNumber ?? '',
+              'Red Alliance': teamsDisplay(match.red_alliance),
+              'Blue Alliance': teamsDisplay(match.blue_alliance),
+              Score: Number.isFinite(redScore) && Number.isFinite(blueScore) ? `${redScore}-${blueScore}` : '',
+              Result: result,
+            }
+          }),
+        },
+      ]
     }
 
-    case 'team-rankings': {
+    case 'team-rankings-region':
+    case 'team-rankings-global':
+    case 'team-rankings-country':
+    case 'team-rankings-event': {
       const rows = Array.isArray(data) ? data : []
-      const isEventMode = (values?.event ?? '').trim() !== ''
+      const isEventMode = viewId === 'team-rankings-event'
       return [{
         title: isEventMode ? 'Team Event Rankings' : 'Team Rankings',
         columns: isEventMode
@@ -667,9 +756,8 @@ function App() {
   const [theme, setTheme] = useState(getInitialTheme)
   const [isSettingsPage, setIsSettingsPage] = useState(false)
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-  const [selectedViewId, setSelectedViewId] = useState(
-    () => [...VIEWS].sort((left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' }))[0].id,
-  )
+  const [selectedTopTabId, setSelectedTopTabId] = useState(SORTED_TOP_LEVEL_TABS[0].id)
+  const [selectedViewId, setSelectedViewId] = useState(() => getSortedViewsForTab(SORTED_TOP_LEVEL_TABS[0])[0]?.id || VIEWS[0].id)
   const [values, setValues] = useState(() => {
     const userDefaults = getStoredUserDefaults()
     const lastFilters = getStoredLastFilters()
@@ -688,15 +776,44 @@ function App() {
   const [tables, setTables] = useState([])
   const [errorMessage, setErrorMessage] = useState('')
 
+  const displayErrorMessage = useMemo(() => {
+    if (!errorMessage) {
+      return ''
+    }
+
+    if (errorMessage.startsWith('Please provide:')) {
+      return errorMessage
+    }
+
+    return `Network error: ${errorMessage}`
+  }, [errorMessage])
+
   const selectedView = useMemo(
     () => VIEWS.find((view) => view.id === selectedViewId) || VIEWS[0],
     [selectedViewId],
   )
 
   const sortedViews = useMemo(
-    () => [...VIEWS].sort((left, right) => left.label.localeCompare(right.label, undefined, { sensitivity: 'base' })),
+    () => [...VIEWS].sort(sortByLabel),
     [],
   )
+
+  const selectedTopTab = useMemo(
+    () => SORTED_TOP_LEVEL_TABS.find((tab) => tab.id === selectedTopTabId) || SORTED_TOP_LEVEL_TABS[0],
+    [selectedTopTabId],
+  )
+
+  const selectedTopTabViews = useMemo(
+    () => sortedViews.filter((view) => selectedTopTab.viewIds.includes(view.id)),
+    [selectedTopTab, sortedViews],
+  )
+
+  useEffect(() => {
+    const tabForSelectedView = TOP_LEVEL_TABS.find((tab) => tab.viewIds.includes(selectedViewId))
+    if (tabForSelectedView && tabForSelectedView.id !== selectedTopTabId) {
+      setSelectedTopTabId(tabForSelectedView.id)
+    }
+  }, [selectedViewId, selectedTopTabId])
 
   const requestedFields = useMemo(
     () => [...selectedView.pathParams, ...selectedView.queryParams, ...(selectedView.localParams || [])],
@@ -708,6 +825,14 @@ function App() {
   }
 
   const runRequest = async () => {
+    const missingRequiredFields = (selectedView.requiredFields || []).filter((field) => !(values[field] ?? '').trim())
+    if (missingRequiredFields.length > 0) {
+      setStatusCode(null)
+      setTables([])
+      setErrorMessage(`Please provide: ${missingRequiredFields.map((field) => FIELD_META[field]?.label ?? field).join(', ')}`)
+      return
+    }
+
     setLoading(true)
     setErrorMessage('')
 
@@ -755,6 +880,36 @@ function App() {
       team: nextDefaults.teamNumber,
     }))
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    if (window.localStorage.getItem(DEFAULTS_MIGRATION_KEY) === 'done') {
+      return
+    }
+
+    const migratedUserDefaults = {
+      ...getStoredUserDefaults(),
+      region: BASE_USER_DEFAULTS.region,
+    }
+    const migratedLastFilters = {
+      ...getStoredLastFilters(),
+      limit: DEFAULT_VALUES.limit,
+    }
+
+    window.localStorage.setItem(USER_DEFAULTS_KEY, JSON.stringify(migratedUserDefaults))
+    window.localStorage.setItem(LAST_FILTERS_KEY, JSON.stringify(migratedLastFilters))
+    window.localStorage.setItem(DEFAULTS_MIGRATION_KEY, 'done')
+
+    setDefaultRegion(migratedUserDefaults.region)
+    setValues((previous) => ({
+      ...previous,
+      region: migratedUserDefaults.region,
+      limit: migratedLastFilters.limit,
+    }))
+  }, [])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -811,7 +966,7 @@ function App() {
                 type="text"
                 value={defaultRegion}
                 onChange={(event) => setDefaultRegion(event.target.value)}
-                placeholder="USCHS"
+                placeholder="USNC"
               />
             </label>
             <label>
@@ -833,8 +988,27 @@ function App() {
       ) : (
         <>
           <section className="card">
-            <div className="tabs-bar" role="tablist" aria-label="Data Views">
-              {sortedViews.map((view) => (
+            <div className="tabs-bar" role="tablist" aria-label="Data Categories">
+              {SORTED_TOP_LEVEL_TABS.map((topTab) => (
+                <button
+                  key={topTab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedTopTabId === topTab.id}
+                  className={`tab-btn ${selectedTopTabId === topTab.id ? 'active' : ''}`}
+                  onClick={() => {
+                    const sortedTopTabViews = getSortedViewsForTab(topTab)
+                    setSelectedTopTabId(topTab.id)
+                    setSelectedViewId((previous) => (topTab.viewIds.includes(previous) ? previous : (sortedTopTabViews[0]?.id || previous)))
+                  }}
+                >
+                  {topTab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="tabs-bar tabs-bar-sub" role="tablist" aria-label={`${selectedTopTab.label} Views`}>
+              {selectedTopTabViews.map((view) => (
                 <button
                   key={view.id}
                   type="button"
@@ -884,7 +1058,7 @@ function App() {
 
           <section className="card">
             <h2>Results</h2>
-            {errorMessage && <p className="error">Network error: {errorMessage}</p>}
+            {displayErrorMessage && <p className="error">{displayErrorMessage}</p>}
             {statusCode !== null && <p className="status">Status: {statusCode}</p>}
             {tables.length === 0 && <p className="empty-state">No data loaded yet.</p>}
             {tables.map((table) => (
