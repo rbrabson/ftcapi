@@ -1008,6 +1008,16 @@ function App() {
     )
   }, [values.eventCode, values.limit])
 
+  // Auto-refresh data when tab, sub-tab, or filter changes
+  useEffect(() => {
+    if (!isSettingsPage) {
+      setTables([]);
+      setErrorMessage('');
+      runRequest();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTopTabId, selectedViewId, values]);
+
   return (
     <main className="app-shell">
       <header>
@@ -1127,15 +1137,6 @@ function App() {
                 ))}
               </div>
             )}
-
-            <div className="actions">
-              <button type="button" onClick={runRequest} disabled={loading || !baseUrl.trim()}>
-                {loading ? 'Loading...' : 'Load Data'}
-              </button>
-              <button type="button" className="secondary" onClick={clearResponse} disabled={loading}>
-                Clear Response
-              </button>
-            </div>
           </section>
 
           <section className="card">
