@@ -158,20 +158,12 @@ const VIEWS = [
     requiredFields: ['country'],
   },
   {
-    id: 'team-rankings-event',
-    label: 'Event',
-    pathTemplate: '/v1/{season}/team-event-rankings',
+    id: 'team-rankings-aggregated-country',
+    label: 'Aggregated',
+    pathTemplate: '/v1/{season}/team-rankings',
     pathParams: ['season'],
-    queryParams: ['event', 'country', 'region', 'limit'],
-    requiredFields: [], // Event is now optional
-  },
-  {
-    id: 'region-advancement',
-    label: 'Teams',
-    pathTemplate: '/v1/{season}/regions/{region}/advancement',
-    pathParams: ['season', 'region'],
-    queryParams: [],
-    requiredFields: ['region'],
+    queryParams: ['region', 'country', 'limit'],
+    requiredFields: [],
   },
   {
     id: 'all-advancement',
@@ -197,7 +189,7 @@ const TOP_LEVEL_TABS = [
   {
     id: 'rankings',
     label: 'Rankings',
-    viewIds: ['team-rankings-region', 'team-rankings-global', 'team-rankings-country', 'team-rankings-event'],
+    viewIds: ['team-rankings-aggregated-country', 'team-rankings-global', 'team-rankings-event'],
   },
   {
     id: 'teams',
@@ -591,30 +583,49 @@ function toTables(viewId, data, values) {
       ]
     }
 
-    case 'team-rankings-region':
+    case 'team-rankings-aggregated-country':
     case 'team-rankings-global':
-    case 'team-rankings-country':
     case 'team-rankings-event': {
       const rows = Array.isArray(data?.rankings) ? data.rankings : Array.isArray(data) ? data : [];
       let title = 'Rankings -> Event';
-      if (viewId === 'team-rankings-region') title = 'Rankings -> Aggregated';
+      if (viewId === 'team-rankings-aggregated-country') {
+        if (values.region && values.region.trim()) {
+          title = 'Rankings -> Aggregated';
+        } else if (values.country && values.country.trim()) {
+          title = 'Rankings -> Country';
+        } else {
+          title = 'Rankings -> Aggregated';
+        }
+      }
+      // Remove Event Name column and ensure Event is populated
+      let columns;
+      if (viewId === 'team-rankings-aggregated-country' && values.region && values.region.trim()) {
+        columns = ['Rank', 'Team Num', 'Team Name', 'Region', 'Matches', 'CCWM', 'OPR', 'npOPR', 'DPR', 'npDPR', 'npAVG'];
+      } else {
+        columns = ['Rank', 'Team Num', 'Team Name', 'Region', 'Event', 'Matches', 'CCWM', 'OPR', 'npOPR', 'DPR', 'npDPR', 'npAVG'];
+      }
       return [{
         title,
-        columns: ['Rank', 'Team Num', 'Team Name', 'Region', 'Event', 'Matches', 'CCWM', 'OPR', 'npOPR', 'DPR', 'npDPR', 'npAVG'],
-        rows: rows.map((item, index) => ({
-          Rank: index + 1,
-          'Team Num': readValue(item, 'team_id', 'TeamID') ?? '',
-          'Team Name': readValue(item, 'team_name', 'TeamName') ?? '',
-          Region: readValue(item, 'region', 'Region') ?? '',
-          Event: readValue(item, 'event_code', 'EventCode') ?? '',
-          Matches: readValue(item, 'matches', 'Matches') ?? '',
-          CCWM: formatNumber(readValue(item, 'ccwm', 'CCWM')),
-          OPR: formatNumber(readValue(item, 'opr', 'OPR')),
-          npOPR: formatNumber(readValue(item, 'np_opr', 'NpOPR')),
-          DPR: formatNumber(readValue(item, 'dpr', 'DPR')),
-          npDPR: formatNumber(readValue(item, 'np_dpr', 'NpDPR')),
-          npAVG: formatNumber(readValue(item, 'np_avg', 'NpAVG')),
-        })),
+        columns,
+        rows: rows.map((item, index) => {
+          const row = {
+            Rank: index + 1,
+            'Team Num': readValue(item, 'team_id', 'TeamID') ?? '',
+            'Team Name': readValue(item, 'team_name', 'TeamName') ?? '',
+            Region: readValue(item, 'region', 'Region') ?? '',
+            Matches: readValue(item, 'matches', 'Matches') ?? '',
+            CCWM: formatNumber(readValue(item, 'ccwm', 'CCWM')),
+            OPR: formatNumber(readValue(item, 'opr', 'OPR')),
+            npOPR: formatNumber(readValue(item, 'np_opr', 'NpOPR')),
+            DPR: formatNumber(readValue(item, 'dpr', 'DPR')),
+            npDPR: formatNumber(readValue(item, 'np_dpr', 'NpDPR')),
+            npAVG: formatNumber(readValue(item, 'np_avg', 'NpAVG')),
+          };
+          if (!(viewId === 'team-rankings-aggregated-country' && values.region && values.region.trim())) {
+            row.Event = readValue(item, 'event_code', 'EventCode') || readValue(item, 'event', 'Event') || '';
+          }
+          return row;
+        }),
       }];
     }
 
