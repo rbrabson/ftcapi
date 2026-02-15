@@ -659,32 +659,45 @@ function toTables(viewId, data, values) {
     }
 
     case 'all-advancement': {
-      const summaries = Array.isArray(data?.event_summaries) ? data.event_summaries : []
+      const summaries = Array.isArray(data?.event_summaries) ? data.event_summaries : [];
+      // Calculate total teams advancing
+      const totalTeamsAdvancing = summaries.reduce((sum, item) => {
+        return sum + (Array.isArray(item.qualified_teams) ? item.qualified_teams.length : 0);
+      }, 0);
+      // Table rows as before
+      const rows = summaries.map((item) => ({
+        'Event Code': readValue(item?.event, 'event_code', 'EventCode') ?? '',
+        'Event Name': readValue(item?.event, 'name', 'Name') ?? '',
+        Date: formatDate(readValue(item?.event, 'date_start', 'DateStart')),
+        'Qualified Teams': Array.isArray(item.qualified_teams) ? item.qualified_teams.length : 0,
+        Teams: Array.isArray(item.qualified_teams)
+          ? item.qualified_teams
+            .map((entry) => {
+              const teamNum = readValue(entry?.team, 'team_id', 'TeamID');
+              const teamName = readValue(entry?.team, 'name', 'Name');
+              if (teamNum && teamName) {
+                return `${teamNum} - ${teamName}`;
+              }
+              if (teamNum) {
+                return String(teamNum);
+              }
+              return teamName || '';
+            })
+            .filter((team) => team)
+          : '',
+      }));
+      // Add a footer row for total teams advancing
+      const footer = (
+        <div style={{ marginTop: '0.75rem', fontWeight: 600, textAlign: 'left' }}>
+          Total Teams Advancing: {totalTeamsAdvancing}
+        </div>
+      );
       return [{
         title: `Advancement Summary${data?.region_code ? ` - ${data.region_code}` : ''}`,
         columns: ['Event Code', 'Event Name', 'Date', 'Qualified Teams', 'Teams'],
-        rows: summaries.map((item) => ({
-          'Event Code': readValue(item?.event, 'event_code', 'EventCode') ?? '',
-          'Event Name': readValue(item?.event, 'name', 'Name') ?? '',
-          Date: formatDate(readValue(item?.event, 'date_start', 'DateStart')),
-          'Qualified Teams': Array.isArray(item.qualified_teams) ? item.qualified_teams.length : 0,
-          Teams: Array.isArray(item.qualified_teams)
-            ? item.qualified_teams
-              .map((entry) => {
-                const teamNum = readValue(entry?.team, 'team_id', 'TeamID')
-                const teamName = readValue(entry?.team, 'name', 'Name')
-                if (teamNum && teamName) {
-                  return `${teamNum} - ${teamName}`
-                }
-                if (teamNum) {
-                  return String(teamNum)
-                }
-                return teamName || ''
-              })
-              .filter((team) => team)
-            : '',
-        })),
-      }]
+        rows,
+        footer,
+      }];
     }
 
     default:
@@ -692,34 +705,34 @@ function toTables(viewId, data, values) {
   }
 }
 
-function DataTable({ title, columns, rows }) {
-  const [sortConfig, setSortConfig] = useState({ column: null, direction: 'asc' })
+function DataTable({ title, columns, rows, footer }) {
+  const [sortConfig, setSortConfig] = useState({ column: null, direction: 'asc' });
 
   const sortedRows = useMemo(() => {
     if (!sortConfig.column) {
-      return rows
+      return rows;
     }
 
-    const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1
+    const directionMultiplier = sortConfig.direction === 'asc' ? 1 : -1;
 
     return [...rows].sort((leftRow, rightRow) => {
-      const leftValue = leftRow[sortConfig.column]
-      const rightValue = rightRow[sortConfig.column]
+      const leftValue = leftRow[sortConfig.column];
+      const rightValue = rightRow[sortConfig.column];
 
-      const leftNumber = Number(leftValue)
-      const rightNumber = Number(rightValue)
-      const leftIsNumber = leftValue !== '' && leftValue !== null && leftValue !== undefined && Number.isFinite(leftNumber)
-      const rightIsNumber = rightValue !== '' && rightValue !== null && rightValue !== undefined && Number.isFinite(rightNumber)
+      const leftNumber = Number(leftValue);
+      const rightNumber = Number(rightValue);
+      const leftIsNumber = leftValue !== '' && leftValue !== null && leftValue !== undefined && Number.isFinite(leftNumber);
+      const rightIsNumber = rightValue !== '' && rightValue !== null && rightValue !== undefined && Number.isFinite(rightNumber);
 
       if (leftIsNumber && rightIsNumber) {
-        return (leftNumber - rightNumber) * directionMultiplier
+        return (leftNumber - rightNumber) * directionMultiplier;
       }
 
-      const leftString = String(leftValue ?? '')
-      const rightString = String(rightValue ?? '')
-      return leftString.localeCompare(rightString, undefined, { numeric: true, sensitivity: 'base' }) * directionMultiplier
-    })
-  }, [rows, sortConfig])
+      const leftString = String(leftValue ?? '');
+      const rightString = String(rightValue ?? '');
+      return leftString.localeCompare(rightString, undefined, { numeric: true, sensitivity: 'base' }) * directionMultiplier;
+    });
+  }, [rows, sortConfig]);
 
   const selectSortColumn = (column) => {
     setSortConfig((previous) => {
@@ -727,15 +740,15 @@ function DataTable({ title, columns, rows }) {
         return {
           column,
           direction: previous.direction === 'desc' ? 'asc' : 'desc',
-        }
+        };
       }
 
       return {
         column,
         direction: 'desc',
-      }
-    })
-  }
+      };
+    });
+  };
 
   return (
     <section className="table-section">
@@ -743,79 +756,82 @@ function DataTable({ title, columns, rows }) {
       {sortedRows.length === 0 ? (
         <p className="empty-state">No rows returned.</p>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {columns.map((column) => (
-                  <th key={column}>
-                    <button type="button" className="column-sort-btn" onClick={() => selectSortColumn(column)}>
-                      {column}
-                      {sortConfig.column === column ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedRows.map((row, index) => (
-                <tr key={`${title}-${index}`}>
+        <>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
                   {columns.map((column) => (
-                    <td
-                      key={column}
-                      className={[
-                        column === 'Red Alliance' ? 'alliance-cell alliance-cell-red' : '',
-                        column === 'Blue Alliance' ? 'alliance-cell alliance-cell-blue' : '',
-                        column === 'Result' && row.Result === 'Red' ? 'result-cell result-red' : '',
-                        column === 'Result' && row.Result === 'Blue' ? 'result-cell result-blue' : '',
-                        column === 'Red Alliance' && row.Result === 'Red' ? 'alliance-winner' : '',
-                        column === 'Blue Alliance' && row.Result === 'Blue' ? 'alliance-winner' : '',
-                      ].filter(Boolean).join(' ')}
-                    >
-                      {Array.isArray(row[column])
-                        ? (['Advancing Event', 'Other Events'].includes(column)
-                          ? (
-                            <ul style={{ margin: 0, paddingLeft: 18 }}>
-                              {row[column].map((event, eventIdx) => (
-                                <li key={eventIdx}>
-                                  {event.eventName}
-                                  {Array.isArray(event.awards) && event.awards.length > 0 && (
-                                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                                      {event.awards.map((award, awardIdx) => (
-                                        <li key={awardIdx}>{award}</li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          )
-                          : row[column].map((entry, entryIndex) => {
-                            if (column === 'Awards') {
-                              return <div key={`${column}-${entryIndex}`}>{entry}</div>;
-                            }
-                            if (entry && typeof entry === 'object' && ('teamNum' in entry || 'teamName' in entry)) {
-                              return (
-                                <div key={`${column}-${entryIndex}`} className="match-team-cell">
-                                  <div className="match-team-num">{entry.teamNum || ''}</div>
-                                  <div className="match-team-name">{entry.teamName || ''}</div>
-                                </div>
-                              );
-                            }
-                            return <div key={`${column}-${entryIndex}`}>{entry}</div>;
-                          })
-                        )
-                        : (row[column] ?? '')}
-                    </td>
+                    <th key={column}>
+                      <button type="button" className="column-sort-btn" onClick={() => selectSortColumn(column)}>
+                        {column}
+                        {sortConfig.column === column ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
+                      </button>
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {sortedRows.map((row, index) => (
+                  <tr key={`${title}-${index}`}>
+                    {columns.map((column) => (
+                      <td
+                        key={column}
+                        className={[
+                          column === 'Red Alliance' ? 'alliance-cell alliance-cell-red' : '',
+                          column === 'Blue Alliance' ? 'alliance-cell alliance-cell-blue' : '',
+                          column === 'Result' && row.Result === 'Red' ? 'result-cell result-red' : '',
+                          column === 'Result' && row.Result === 'Blue' ? 'result-cell result-blue' : '',
+                          column === 'Red Alliance' && row.Result === 'Red' ? 'alliance-winner' : '',
+                          column === 'Blue Alliance' && row.Result === 'Blue' ? 'alliance-winner' : '',
+                        ].filter(Boolean).join(' ')}
+                      >
+                        {Array.isArray(row[column])
+                          ? (['Advancing Event', 'Other Events'].includes(column)
+                            ? (
+                              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                                {row[column].map((event, eventIdx) => (
+                                  <li key={eventIdx}>
+                                    {event.eventName}
+                                    {Array.isArray(event.awards) && event.awards.length > 0 && (
+                                      <ul style={{ margin: 0, paddingLeft: 18 }}>
+                                        {event.awards.map((award, awardIdx) => (
+                                          <li key={awardIdx}>{award}</li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            )
+                            : row[column].map((entry, entryIndex) => {
+                              if (column === 'Awards') {
+                                return <div key={`${column}-${entryIndex}`}>{entry}</div>;
+                              }
+                              if (entry && typeof entry === 'object' && ('teamNum' in entry || 'teamName' in entry)) {
+                                return (
+                                  <div key={`${column}-${entryIndex}`} className="match-team-cell">
+                                    <div className="match-team-num">{entry.teamNum || ''}</div>
+                                    <div className="match-team-name">{entry.teamName || ''}</div>
+                                  </div>
+                                );
+                              }
+                              return <div key={`${column}-${entryIndex}`}>{entry}</div>;
+                            })
+                          )
+                          : (row[column] ?? '')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {footer}
+        </>
       )}
     </section>
-  )
+  );
 }
 
 function App() {
@@ -1149,7 +1165,13 @@ function App() {
             {/* Status code display removed */}
             {tables.length === 0 && <p className="empty-state">No data loaded yet.</p>}
             {tables.map((table) => (
-              <DataTable key={table.title} title={table.title} columns={table.columns} rows={table.rows} />
+              <DataTable
+                key={table.title}
+                title={table.title}
+                columns={table.columns}
+                rows={table.rows}
+                {...(table.footer ? { footer: table.footer } : {})}
+              />
             ))}
           </section>
         </>
