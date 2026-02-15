@@ -275,10 +275,10 @@ function eventDisplay(event) {
 function buildEventDetailsTable(event) {
   return {
     title: 'Event',
-    columns: ['Event', 'Year', 'Location', 'Date'],
+    columns: ['Event', 'Season', 'Location', 'Date'],
     rows: [{
       Event: eventDisplay(event),
-      Year: readValue(event, 'year', 'Year') ?? '',
+      Season: readValue(event, 'year', 'Year') ?? '',
       Location: [readValue(event, 'city', 'City'), readValue(event, 'state_prov', 'StateProv'), readValue(event, 'country', 'Country')]
         .filter(Boolean)
         .join(', '),
