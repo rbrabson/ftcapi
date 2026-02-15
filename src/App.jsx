@@ -136,7 +136,7 @@ const VIEWS = [
   },
   {
     id: 'team-rankings-region',
-    label: 'Region',
+    label: 'Aggregated',
     pathTemplate: '/v1/{season}/team-rankings',
     pathParams: ['season'],
     queryParams: ['region', 'limit'],
@@ -291,16 +291,14 @@ function eventDisplay(event) {
 function buildEventDetailsTable(event) {
   return {
     title: 'Event',
-    columns: ['Event', 'Year', 'Location', 'Dates'],
+    columns: ['Event', 'Year', 'Location', 'Date'],
     rows: [{
       Event: eventDisplay(event),
       Year: readValue(event, 'year', 'Year') ?? '',
       Location: [readValue(event, 'city', 'City'), readValue(event, 'state_prov', 'StateProv'), readValue(event, 'country', 'Country')]
         .filter(Boolean)
         .join(', '),
-      Dates: [formatDate(readValue(event, 'date_start', 'DateStart')), formatDate(readValue(event, 'date_end', 'DateEnd'))]
-        .filter(Boolean)
-        .join(' to '),
+      Date: formatDate(readValue(event, 'date_start', 'DateStart')),
     }],
   }
 }
@@ -598,8 +596,10 @@ function toTables(viewId, data, values) {
     case 'team-rankings-country':
     case 'team-rankings-event': {
       const rows = Array.isArray(data?.rankings) ? data.rankings : Array.isArray(data) ? data : [];
+      let title = 'Rankings -> Event';
+      if (viewId === 'team-rankings-region') title = 'Rankings -> Aggregated';
       return [{
-        title: 'Rankings -> Event',
+        title,
         columns: ['Rank', 'Team Num', 'Team Name', 'Region', 'Event', 'Matches', 'CCWM', 'OPR', 'npOPR', 'DPR', 'npDPR', 'npAVG'],
         rows: rows.map((item, index) => ({
           Rank: index + 1,
