@@ -87,7 +87,7 @@ const VIEWS = [
   },
   {
     id: 'team-details',
-    label: 'Details',
+    label: 'Team Detail',
     pathTemplate: '/v1/{season}/team/{teamId}',
     pathParams: ['season', 'teamId'],
     queryParams: [],
@@ -175,7 +175,7 @@ const VIEWS = [
   },
   {
     id: 'all-advancement',
-    label: 'By Event',
+    label: 'By Region',
     pathTemplate: '/v1/{season}/advancement',
     pathParams: ['season'],
     queryParams: ['region'],
@@ -401,6 +401,16 @@ function toTables(viewId, data, values) {
 
     case 'team-details': {
       const events = Array.isArray(readValue(data, 'events', 'Events')) ? readValue(data, 'events', 'Events') : []
+      // Collect all events except the current season's main event (if any)
+      const otherEvents = events.map((item) => {
+        return {
+          eventName: readValue(item, 'event_name', 'EventName') ?? '',
+          eventCode: readValue(item, 'event_code', 'EventCode') ?? '',
+          awards: Array.isArray(readValue(item, 'awards', 'Awards'))
+            ? readValue(item, 'awards', 'Awards').map(a => String(a))
+            : [],
+        }
+      })
       return [
         {
           title: 'Team Summary',
@@ -430,6 +440,15 @@ function toTables(viewId, data, values) {
             Awards: Array.isArray(readValue(item, 'awards', 'Awards'))
               ? readValue(item, 'awards', 'Awards').map(a => String(a))
               : [],
+          })),
+        },
+        {
+          title: 'Other Events',
+          columns: ['Event Code', 'Event Name', 'Awards'],
+          rows: otherEvents.map((event) => ({
+            'Event Code': event.eventCode,
+            'Event Name': event.eventName,
+            'Awards': event.awards,
           })),
         },
       ]
