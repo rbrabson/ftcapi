@@ -147,7 +147,7 @@ const VIEWS = [
     label: 'By Event',
     pathTemplate: '/v1/2025/team-event-rankings',
     pathParams: [],
-    queryParams: ['limit'],
+    queryParams: ['season', 'country', 'region', 'event', 'limit'],
   },
   {
     id: 'team-rankings-country',
