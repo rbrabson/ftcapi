@@ -220,3 +220,16 @@ thead th {
   font-weight: 800;
   color: var(--text-color);
 }
+
+.result-cell {
+  font-weight: bold;
+  color: #fff;
+}
+
+.result-red {
+  background: color-mix(in srgb, #ff0000 30%, transparent);
+}
+
+.result-blue {
+  background: color-mix(in srgb, #0066ff 30%, transparent);
+}

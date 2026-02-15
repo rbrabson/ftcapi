@@ -766,6 +766,8 @@ function DataTable({ title, columns, rows }) {
                       className={[
                         column === 'Red Alliance' ? 'alliance-cell alliance-cell-red' : '',
                         column === 'Blue Alliance' ? 'alliance-cell alliance-cell-blue' : '',
+                        column === 'Result' && row.Result === 'Red' ? 'result-cell result-red' : '',
+                        column === 'Result' && row.Result === 'Blue' ? 'result-cell result-blue' : '',
                         column === 'Red Alliance' && row.Result === 'Red' ? 'alliance-winner' : '',
                         column === 'Blue Alliance' && row.Result === 'Blue' ? 'alliance-winner' : '',
                       ].filter(Boolean).join(' ')}
