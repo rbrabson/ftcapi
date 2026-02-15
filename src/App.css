@@ -223,7 +223,7 @@ thead th {
 
 .result-cell {
   font-weight: bold;
-  color: #fff;
+  color: var(--result-cell-light-text);
 }
 
 .result-red {
@@ -232,4 +232,12 @@ thead th {
 
 .result-blue {
   background: color-mix(in srgb, #0066ff 30%, transparent);
+}
+
+:root {
+  --result-cell-light-text: #111;
+}
+
+[data-theme='dark'] {
+  --result-cell-light-text: #fff;
 }
