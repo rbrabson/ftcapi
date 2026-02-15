@@ -144,9 +144,9 @@ const VIEWS = [
   },
   {
     id: 'team-rankings-global',
-    label: 'Global',
-    pathTemplate: '/v1/{season}/team-rankings',
-    pathParams: ['season'],
+    label: 'By Event',
+    pathTemplate: '/v1/2025/team-event-rankings',
+    pathParams: [],
     queryParams: ['limit'],
   },
   {
