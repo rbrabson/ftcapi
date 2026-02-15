@@ -87,7 +87,7 @@ const VIEWS = [
   },
   {
     id: 'team-details',
-    label: 'Details',
+    label: 'Team Detail',
     pathTemplate: '/v1/{season}/team/{teamId}',
     pathParams: ['season', 'teamId'],
     queryParams: [],
@@ -175,7 +175,7 @@ const VIEWS = [
   },
   {
     id: 'all-advancement',
-    label: 'By Event',
+    label: 'By Region',
     pathTemplate: '/v1/{season}/advancement',
     pathParams: ['season'],
     queryParams: ['region'],
@@ -436,8 +436,15 @@ function toTables(viewId, data, values) {
     }
 
     case 'event-teams': {
+      // API returns { event: {..., teams: [...] } } for event-teams
+      const teams = Array.isArray(data?.teams)
+        ? data.teams
+        : Array.isArray(data?.event?.teams)
+          ? data.event.teams
+          : Array.isArray(data) ? data : [];
+      const eventDetails = data?.event || event;
       return [
-        buildEventDetailsTable(event),
+        buildEventDetailsTable(eventDetails),
         {
           title: 'Event Teams',
           columns: ['Team Num', 'Team Name', 'Location', 'Region', 'Rookie Year'],
@@ -504,7 +511,7 @@ function toTables(viewId, data, values) {
         buildEventDetailsTable(event),
         {
           title: `Event Advancement${event?.event_code ? ` - ${event.event_code}` : ''}`,
-          columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing', 'Advancing Event', 'Other Events'],
+          columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing'],
           rows: advancements.map((item) => {
             const team = readValue(item, 'team', 'Team')
             const status = (readValue(item, 'status', 'Status') ?? '').toString().toLowerCase()
@@ -514,25 +521,6 @@ function toTables(viewId, data, values) {
               : (status === 'already_advanced' || status === 'already advancing' || status === 'already advanced' || !advances)
                 ? '-'
                 : '-'
-            // Advancing event and awards
-            const advEvent = event
-            const advEventName = eventDisplay(advEvent)
-            const advAwards = Array.isArray(readValue(item, 'advancing_event_awards', 'AdvancingEventAwards'))
-              ? readValue(item, 'advancing_event_awards', 'AdvancingEventAwards')
-                .map((award) => readValue(award, 'name', 'Name'))
-                .filter((name) => name)
-              : []
-            // Other events and their awards
-            const otherEvents = Array.isArray(readValue(item, 'other_event_participations', 'OtherEventParticipations'))
-              ? readValue(item, 'other_event_participations', 'OtherEventParticipations').map((entry) => {
-                const eventObj = readValue(entry, 'event', 'Event')
-                const eventName = eventDisplay(eventObj)
-                const awards = Array.isArray(readValue(entry, 'awards', 'Awards'))
-                  ? readValue(entry, 'awards', 'Awards').map((award) => readValue(award, 'name', 'Name')).filter((name) => name)
-                  : []
-                return { eventName, awards }
-              })
-              : []
             return {
               Rank: readValue(item, 'rank', 'Rank') ?? '',
               'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
@@ -544,8 +532,6 @@ function toTables(viewId, data, values) {
               Qualification: readValue(item, 'qualification_points', 'QualificationPoints') ?? '',
               'Adv #': readValue(item, 'advancement_number', 'AdvancementNumber') ?? '',
               Advancing: advancing,
-              'Advancing Event': advEventName ? [{ eventName: advEventName, awards: advAwards }] : [],
-              'Other Events': otherEvents,
             }
           }),
         },
@@ -611,8 +597,8 @@ function toTables(viewId, data, values) {
     case 'team-rankings-global':
     case 'team-rankings-country':
     case 'team-rankings-event': {
-      const rows = Array.isArray(data) ? data : []
-      const isEventMode = viewId === 'team-rankings-event'
+      const rows = Array.isArray(data?.rankings) ? data.rankings : Array.isArray(data) ? data : [];
+      const isEventMode = viewId === 'team-rankings-event';
       return [{
         title: isEventMode ? 'Team Event Rankings' : 'Team Rankings',
         columns: isEventMode
@@ -632,7 +618,7 @@ function toTables(viewId, data, values) {
           npDPR: formatNumber(readValue(item, 'np_dpr', 'NpDPR')),
           npAVG: formatNumber(readValue(item, 'np_avg', 'NpAVG')),
         })),
-      }]
+      }];
     }
 
     case 'region-advancement': {
@@ -862,11 +848,8 @@ function App() {
       return ''
     }
 
-    if (errorMessage.startsWith('Please provide:')) {
-      return errorMessage
-    }
-
-    return `Network error: ${errorMessage}`
+    // Show errorMessage as-is, no prefix
+    return errorMessage
   }, [errorMessage])
 
   const selectedView = useMemo(
@@ -907,6 +890,27 @@ function App() {
 
   const runRequest = async () => {
     const missingRequiredFields = (selectedView.requiredFields || []).filter((field) => !(values[field] ?? '').trim())
+    // Show error for all Events sub-tabs if eventCode is missing
+    const eventsSubTabIds = [
+      'event-teams',
+      'event-details',
+      'event-matches',
+      'event-rankings',
+      'event-advancement',
+      'event-awards',
+      'event-alliance-selection',
+      'event-insights',
+      'event-qualifications',
+      'event-playoffs',
+      'event-results',
+      'event-schedule',
+      // Add any other Events sub-tab IDs as needed
+    ];
+    if (eventsSubTabIds.includes(selectedView.id) && (!values.eventCode || !values.eventCode.trim())) {
+      setTables([]);
+      setErrorMessage('Provide an Event Code');
+      return;
+    }
     if (missingRequiredFields.length > 0) {
       setStatusCode(null)
       setTables([])
