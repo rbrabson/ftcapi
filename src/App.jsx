@@ -125,6 +125,15 @@ const VIEWS = [
     queryParams: [],
     requiredFields: ['eventCode'],
   },
+  // New Advancement tab under Events, identical to event-advancement
+  {
+    id: 'event-advancement-events',
+    label: 'Advancement',
+    pathTemplate: '/v1/{season}/events/{eventCode}/advancement',
+    pathParams: ['season', 'eventCode'],
+    queryParams: [],
+    requiredFields: ['eventCode'],
+  },
   {
     id: 'event-matches',
     label: 'Matches',
@@ -171,7 +180,7 @@ const TOP_LEVEL_TABS = [
   {
     id: 'events',
     label: 'Events',
-    viewIds: ['event-teams', 'event-matches', 'event-rankings', 'event-awards'],
+    viewIds: ['event-teams', 'event-matches', 'event-rankings', 'event-awards', 'event-advancement-events'],
   },
   {
     id: 'advancement',
@@ -361,6 +370,10 @@ function buildUrl(baseUrl, view, values) {
 function toTables(viewId, data, values) {
   const event = data?.event
 
+  // Treat 'event-advancement-events' as 'event-advancement' for table rendering
+  if (viewId === 'event-advancement-events') {
+    viewId = 'event-advancement';
+  }
   switch (viewId) {
     case 'health':
       return [{ title: 'Health', columns: ['Status'], rows: [{ Status: data?.status ?? '' }] }]
