@@ -150,14 +150,6 @@ const VIEWS = [
     queryParams: ['season', 'country', 'region', 'event', 'limit'],
   },
   {
-    id: 'team-rankings-country',
-    label: 'Country',
-    pathTemplate: '/v1/{season}/team-rankings',
-    pathParams: ['season'],
-    queryParams: ['country', 'limit'],
-    requiredFields: ['country'],
-  },
-  {
     id: 'team-rankings-aggregated-country',
     label: 'Aggregated',
     pathTemplate: '/v1/{season}/team-rankings',
