@@ -1,4 +1,4 @@
-# FTC Standing Frontend
+# FTC API Frontend
 
 React frontend for the ftcstanding HTTP server API from `github.com/rbrabson/ftcstanding/server`.
 
@@ -7,7 +7,7 @@ React frontend for the ftcstanding HTTP server API from `github.com/rbrabson/ftc
 - Configurable API base URL (`VITE_API_BASE_URL`)
 - Data-view selector for all documented server routes
 - Inputs for required filter options (season, region, event, team, limit)
-- One-click data loading for selected view
+- One-click data loading for the selected view
 - Tabular output modeled after the CLI presentation style
 - Light/dark mode toggle with saved preference
 
