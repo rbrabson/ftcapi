@@ -162,8 +162,8 @@ const VIEWS = [
     label: 'Event',
     pathTemplate: '/v1/{season}/team-event-rankings',
     pathParams: ['season'],
-    queryParams: ['event', 'limit'],
-    requiredFields: ['event'],
+    queryParams: ['event', 'country', 'region', 'limit'],
+    requiredFields: [], // Event is now optional
   },
   {
     id: 'region-advancement',
@@ -598,12 +598,9 @@ function toTables(viewId, data, values) {
     case 'team-rankings-country':
     case 'team-rankings-event': {
       const rows = Array.isArray(data?.rankings) ? data.rankings : Array.isArray(data) ? data : [];
-      const isEventMode = viewId === 'team-rankings-event';
       return [{
-        title: isEventMode ? 'Team Event Rankings' : 'Team Rankings',
-        columns: isEventMode
-          ? ['Rank', 'Team Num', 'Team Name', 'Region', 'Event', 'Matches', 'CCWM', 'OPR', 'npOPR', 'DPR', 'npDPR', 'npAVG']
-          : ['Rank', 'Team Num', 'Team Name', 'Region', 'Matches', 'CCWM', 'OPR', 'npOPR', 'DPR', 'npDPR', 'npAVG'],
+        title: 'Rankings -> Event',
+        columns: ['Rank', 'Team Num', 'Team Name', 'Region', 'Event', 'Matches', 'CCWM', 'OPR', 'npOPR', 'DPR', 'npDPR', 'npAVG'],
         rows: rows.map((item, index) => ({
           Rank: index + 1,
           'Team Num': readValue(item, 'team_id', 'TeamID') ?? '',
