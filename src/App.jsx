@@ -523,7 +523,7 @@ function toTables(viewId, data, values) {
         buildEventDetailsTable(event),
         {
           title: `Event Advancement${event?.event_code ? ` - ${event.event_code}` : ''}`,
-          columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing', 'Advancing Event', 'Other Events'],
+          columns: ['Rank', 'Team Num', 'Team Name', 'Total Pts', 'Judging', 'Playoff', 'Selection', 'Qualification', 'Adv #', 'Advancing'],
           rows: advancements.map((item) => {
             const team = readValue(item, 'team', 'Team')
             const status = (readValue(item, 'status', 'Status') ?? '').toString().toLowerCase()
@@ -533,25 +533,6 @@ function toTables(viewId, data, values) {
               : (status === 'already_advanced' || status === 'already advancing' || status === 'already advanced' || !advances)
                 ? '-'
                 : '-'
-            // Advancing event and awards
-            const advEvent = event
-            const advEventName = eventDisplay(advEvent)
-            const advAwards = Array.isArray(readValue(item, 'advancing_event_awards', 'AdvancingEventAwards'))
-              ? readValue(item, 'advancing_event_awards', 'AdvancingEventAwards')
-                .map((award) => readValue(award, 'name', 'Name'))
-                .filter((name) => name)
-              : []
-            // Other events and their awards
-            const otherEvents = Array.isArray(readValue(item, 'other_event_participations', 'OtherEventParticipations'))
-              ? readValue(item, 'other_event_participations', 'OtherEventParticipations').map((entry) => {
-                const eventObj = readValue(entry, 'event', 'Event')
-                const eventName = eventDisplay(eventObj)
-                const awards = Array.isArray(readValue(entry, 'awards', 'Awards'))
-                  ? readValue(entry, 'awards', 'Awards').map((award) => readValue(award, 'name', 'Name')).filter((name) => name)
-                  : []
-                return { eventName, awards }
-              })
-              : []
             return {
               Rank: readValue(item, 'rank', 'Rank') ?? '',
               'Team Num': readValue(team, 'team_id', 'TeamID') ?? '',
@@ -563,8 +544,6 @@ function toTables(viewId, data, values) {
               Qualification: readValue(item, 'qualification_points', 'QualificationPoints') ?? '',
               'Adv #': readValue(item, 'advancement_number', 'AdvancementNumber') ?? '',
               Advancing: advancing,
-              'Advancing Event': advEventName ? [{ eventName: advEventName, awards: advAwards }] : [],
-              'Other Events': otherEvents,
             }
           }),
         },
