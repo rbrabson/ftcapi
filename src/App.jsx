@@ -401,16 +401,6 @@ function toTables(viewId, data, values) {
 
     case 'team-details': {
       const events = Array.isArray(readValue(data, 'events', 'Events')) ? readValue(data, 'events', 'Events') : []
-      // Collect all events except the current season's main event (if any)
-      const otherEvents = events.map((item) => {
-        return {
-          eventName: readValue(item, 'event_name', 'EventName') ?? '',
-          eventCode: readValue(item, 'event_code', 'EventCode') ?? '',
-          awards: Array.isArray(readValue(item, 'awards', 'Awards'))
-            ? readValue(item, 'awards', 'Awards').map(a => String(a))
-            : [],
-        }
-      })
       return [
         {
           title: 'Team Summary',
@@ -442,21 +432,19 @@ function toTables(viewId, data, values) {
               : [],
           })),
         },
-        {
-          title: 'Other Events',
-          columns: ['Event Code', 'Event Name', 'Awards'],
-          rows: otherEvents.map((event) => ({
-            'Event Code': event.eventCode,
-            'Event Name': event.eventName,
-            'Awards': event.awards,
-          })),
-        },
       ]
     }
 
     case 'event-teams': {
+      // API returns { event: {..., teams: [...] } } for event-teams
+      const teams = Array.isArray(data?.teams)
+        ? data.teams
+        : Array.isArray(data?.event?.teams)
+          ? data.event.teams
+          : Array.isArray(data) ? data : [];
+      const eventDetails = data?.event || event;
       return [
-        buildEventDetailsTable(event),
+        buildEventDetailsTable(eventDetails),
         {
           title: 'Event Teams',
           columns: ['Team Num', 'Team Name', 'Location', 'Region', 'Rookie Year'],
@@ -609,8 +597,8 @@ function toTables(viewId, data, values) {
     case 'team-rankings-global':
     case 'team-rankings-country':
     case 'team-rankings-event': {
-      const rows = Array.isArray(data) ? data : []
-      const isEventMode = viewId === 'team-rankings-event'
+      const rows = Array.isArray(data?.rankings) ? data.rankings : Array.isArray(data) ? data : [];
+      const isEventMode = viewId === 'team-rankings-event';
       return [{
         title: isEventMode ? 'Team Event Rankings' : 'Team Rankings',
         columns: isEventMode
@@ -630,7 +618,7 @@ function toTables(viewId, data, values) {
           npDPR: formatNumber(readValue(item, 'np_dpr', 'NpDPR')),
           npAVG: formatNumber(readValue(item, 'np_avg', 'NpAVG')),
         })),
-      }]
+      }];
     }
 
     case 'region-advancement': {
