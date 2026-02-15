@@ -521,58 +521,57 @@ function toTables(viewId, data, values) {
     }
 
     case 'event-matches': {
-      const matches = Array.isArray(event?.matches) ? event.matches : Array.isArray(data?.matches) ? data.matches : []
-      const selectedPhase = (values?.phase ?? '').trim().toLowerCase()
+      const matches = Array.isArray(event?.matches) ? event.matches : Array.isArray(data?.matches) ? data.matches : [];
+      const selectedPhase = (values?.phase ?? '').trim().toLowerCase();
       const phaseFilteredMatches = selectedPhase
         ? matches.filter((match) => getMatchPhase(match) === selectedPhase)
-        : matches
+        : matches;
 
-      const selectedTeamFilter = (values?.team ?? '').trim()
+      const selectedTeamFilter = (values?.team ?? '').trim();
       const teamFilteredMatches = selectedTeamFilter
         ? phaseFilteredMatches.filter((match) => {
           const redHasTeam = Array.isArray(match?.red_alliance?.teams)
-            && match.red_alliance.teams.some((team) => String(readValue(team, 'team_id', 'TeamID') ?? '') === selectedTeamFilter)
+            && match.red_alliance.teams.some((team) => String(readValue(team, 'team_id', 'TeamID') ?? '') === selectedTeamFilter);
           const blueHasTeam = Array.isArray(match?.blue_alliance?.teams)
-            && match.blue_alliance.teams.some((team) => String(readValue(team, 'team_id', 'TeamID') ?? '') === selectedTeamFilter)
-          return redHasTeam || blueHasTeam
+            && match.blue_alliance.teams.some((team) => String(readValue(team, 'team_id', 'TeamID') ?? '') === selectedTeamFilter);
+          return redHasTeam || blueHasTeam;
         })
-        : phaseFilteredMatches
+        : phaseFilteredMatches;
 
-      const requestedLimit = Number.parseInt((values?.limit ?? '').trim(), 10)
+      const requestedLimit = Number.parseInt((values?.limit ?? '').trim(), 10);
       const filteredMatches = Number.isFinite(requestedLimit) && requestedLimit > 0
         ? teamFilteredMatches.slice(0, requestedLimit)
-        : teamFilteredMatches
+        : teamFilteredMatches;
 
       return [
         buildEventDetailsTable(event),
         {
           title: `Event Matches${event?.event_code ? ` - ${event.event_code}` : ''}`,
-          columns: ['Type', 'Match #', 'Red Alliance', 'Blue Alliance', 'Score', 'Result'],
+          columns: ['Match', 'Red Alliance', 'Blue Alliance', 'Score', 'Result'],
           rows: filteredMatches.map((match) => {
-            const redScore = match?.red_alliance?.score?.total_points
-            const blueScore = match?.blue_alliance?.score?.total_points
-            let result = match?.result ?? ''
+            const redScore = match?.red_alliance?.score?.total_points;
+            const blueScore = match?.blue_alliance?.score?.total_points;
+            let result = match?.result ?? '';
             if (!result && Number.isFinite(redScore) && Number.isFinite(blueScore)) {
               if (redScore > blueScore) {
-                result = 'Red'
+                result = 'Red';
               } else if (blueScore > redScore) {
-                result = 'Blue'
+                result = 'Blue';
               } else {
-                result = 'Tie'
+                result = 'Tie';
               }
             }
 
             return {
-              Type: match.matchType ?? '',
-              'Match #': match.matchNumber ?? '',
+              Match: `${match.matchType ?? ''} ${match.matchNumber ?? ''}`.trim(),
               'Red Alliance': teamsDisplay(match.red_alliance),
               'Blue Alliance': teamsDisplay(match.blue_alliance),
               Score: Number.isFinite(redScore) && Number.isFinite(blueScore) ? `${redScore}-${blueScore}` : '',
               Result: result,
-            }
+            };
           }),
         },
-      ]
+      ];
     }
 
     case 'team-rankings-aggregated-country':
