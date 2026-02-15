@@ -848,11 +848,8 @@ function App() {
       return ''
     }
 
-    if (errorMessage.startsWith('Please provide:')) {
-      return errorMessage
-    }
-
-    return `Network error: ${errorMessage}`
+    // Show errorMessage as-is, no prefix
+    return errorMessage
   }, [errorMessage])
 
   const selectedView = useMemo(
@@ -893,6 +890,27 @@ function App() {
 
   const runRequest = async () => {
     const missingRequiredFields = (selectedView.requiredFields || []).filter((field) => !(values[field] ?? '').trim())
+    // Show error for all Events sub-tabs if eventCode is missing
+    const eventsSubTabIds = [
+      'event-teams',
+      'event-details',
+      'event-matches',
+      'event-rankings',
+      'event-advancement',
+      'event-awards',
+      'event-alliance-selection',
+      'event-insights',
+      'event-qualifications',
+      'event-playoffs',
+      'event-results',
+      'event-schedule',
+      // Add any other Events sub-tab IDs as needed
+    ];
+    if (eventsSubTabIds.includes(selectedView.id) && (!values.eventCode || !values.eventCode.trim())) {
+      setTables([]);
+      setErrorMessage('Provide an Event Code');
+      return;
+    }
     if (missingRequiredFields.length > 0) {
       setStatusCode(null)
       setTables([])
