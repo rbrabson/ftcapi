@@ -418,7 +418,7 @@ function toTables(viewId, data, values) {
         },
         {
           title: 'Events',
-          columns: ['Event Code', 'Event Name', 'Rank', 'Total', 'Qual', 'Playoff', 'Advanced', 'Awards'],
+          columns: ['Event Code', 'Event Name', 'Rank', 'Total', 'Qual', 'Playoff', 'Awards', 'Advanced'],
           rows: events.map((item) => ({
             'Event Code': readValue(item, 'event_code', 'EventCode') ?? '',
             'Event Name': readValue(item, 'event_name', 'EventName') ?? '',
@@ -426,10 +426,10 @@ function toTables(viewId, data, values) {
             Total: formatRecord(readValue(item, 'total_record', 'TotalRecord')),
             Qual: formatRecord(readValue(item, 'qual_record', 'QualRecord')),
             Playoff: formatRecord(readValue(item, 'playoff_record', 'PlayoffRecord')),
-            Advanced: readValue(item, 'advanced', 'Advanced') ? '✓' : '',
             Awards: Array.isArray(readValue(item, 'awards', 'Awards'))
               ? readValue(item, 'awards', 'Awards').map(a => String(a))
               : [],
+            Advanced: readValue(item, 'advanced', 'Advanced') ? '✓' : '',
           })),
         },
       ]
