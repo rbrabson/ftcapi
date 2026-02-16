@@ -153,6 +153,13 @@ table {
   min-width: 720px;
 }
 
+/* Widen the Match column in Events -> Matches */
+th:first-child,
+td:first-child {
+  min-width: 160px;
+  width: 160px;
+}
+
 th,
 td {
   padding: 0.5rem 0.6rem;

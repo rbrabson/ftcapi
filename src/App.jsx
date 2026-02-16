@@ -79,6 +79,14 @@ function getStoredLastFilters() {
 
 const VIEWS = [
   {
+    id: 'advancement-teams',
+    label: 'Teams',
+    pathTemplate: '/v1/{season}/advancement',
+    pathParams: ['season'],
+    queryParams: ['region'],
+    requiredFields: ['region'],
+  },
+  {
     id: 'teams',
     label: 'List',
     pathTemplate: '/v1/{season}/teams/{region?}',
@@ -185,7 +193,7 @@ const TOP_LEVEL_TABS = [
   {
     id: 'advancement',
     label: 'Advancement',
-    viewIds: ['event-advancement', 'all-advancement', 'region-advancement'],
+    viewIds: ['event-advancement', 'all-advancement', 'region-advancement', 'advancement-teams'],
   },
   {
     id: 'rankings',
@@ -368,6 +376,53 @@ function buildUrl(baseUrl, view, values) {
 }
 
 function toTables(viewId, data, values) {
+  // ...existing code...
+  switch (viewId) {
+    // ...existing cases...
+    case 'advancement-teams': {
+      // This view is a raw list of advancing teams for a region, with event info
+      // Data shape: { event_summaries: [ { event: {...}, qualified_teams: [ { team: {...} } ] } ] }
+      const summaries = Array.isArray(data?.event_summaries) ? data.event_summaries : [];
+      // Flatten to a list of { teamNum, teamName, eventCode, eventName }
+      let teamRows = [];
+      summaries.forEach((item) => {
+        const event = item.event || {};
+        const eventCode = readValue(event, 'event_code', 'EventCode') ?? '';
+        const eventName = readValue(event, 'name', 'Name') ?? '';
+        (Array.isArray(item.qualified_teams) ? item.qualified_teams : []).forEach((entry) => {
+          const team = readValue(entry, 'team', 'Team') || {};
+          const teamNum = readValue(team, 'team_id', 'TeamID') ?? '';
+          const teamName = readValue(team, 'name', 'Name') ?? '';
+          teamRows.push({
+            'Team Num': teamNum,
+            'Team Name': teamName,
+            'Event Code': eventCode,
+            'Event Name': eventName,
+          });
+        });
+      });
+      // Sort by Team Name ascending (alphabetical, case-insensitive)
+      teamRows = teamRows.sort((a, b) => {
+        const nameA = (a['Team Name'] || '').toLowerCase();
+        const nameB = (b['Team Name'] || '').toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+      });
+      const footer = (
+        <div style={{ marginTop: '0.75rem', fontWeight: 600, textAlign: 'left' }}>
+          Total Teams: {teamRows.length}
+        </div>
+      );
+      return [{
+        title: `Advancing Teams${data?.region_code ? ` - ${data.region_code}` : ''}`,
+        columns: ['Team Num', 'Team Name', 'Event Code', 'Event Name'],
+        rows: teamRows,
+        footer,
+      }];
+    }
+    // ...existing cases...
+  }
   const event = data?.event
 
   // Treat 'event-advancement-events' as 'event-advancement' for table rendering
@@ -379,7 +434,12 @@ function toTables(viewId, data, values) {
       return [{ title: 'Health', columns: ['Status'], rows: [{ Status: data?.status ?? '' }] }]
 
     case 'teams': {
-      const teams = Array.isArray(data) ? data : []
+      const teams = Array.isArray(data) ? data : [];
+      const footer = (
+        <div style={{ marginTop: '0.75rem', fontWeight: 600, textAlign: 'left' }}>
+          Total Teams: {teams.length}
+        </div>
+      );
       return [{
         title: 'Teams',
         columns: ['Team Num', 'Team Name', 'Country', 'Region', 'Location', 'Rookie Year'],
@@ -391,7 +451,8 @@ function toTables(viewId, data, values) {
           Location: [team.city, team.state_prov, team.country].filter(Boolean).join(', '),
           'Rookie Year': team.rookie_year ?? '',
         })),
-      }]
+        footer,
+      }];
     }
 
     case 'team-details': {
